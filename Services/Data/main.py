@@ -43,19 +43,22 @@ def db_connection(func):
 def api_get(url):
     headers = {'User-Agent': 'data_analysis_project-Chaotic#1161',}
     response = requests.get(f"https://prices.runescape.wiki/api/v1/osrs/{url}", headers=headers)
-    return response
+    return json.loads(response.text)
 
-def update_mapping():
-    api_get("mapping")
+@db_connection
+def update_mapping(**kwargs):
+    result = api_get("mapping")
     
     # fjern ids der er forkerte ud fra settings.json perhaps (google hvilke)
 
     # store data
 
+     # https://static.runelite.net/cache/item/icon/{item_id}.png er et nemt sted at snuppe ikoner fra 
+     # gem dem i seperat db table (lav ny metode til at tjekke efter nye entries og kald den)
+
 @db_connection
 def store_5min(**kwargs):
-    response = api_get("5m")
-    result = json.loads(response.text)
+    result = api_get("5m")
 
     timestamp = result["timestamp"]
     timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
