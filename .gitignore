@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Connection string
-settings
+Services/Data/settings.json
