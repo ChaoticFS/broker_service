@@ -48,13 +48,46 @@ def api_get(url):
 @db_connection
 def update_mapping(**kwargs):
     result = api_get("mapping")
-    
-    # fjern ids der er forkerte ud fra settings.json perhaps (google hvilke)
+    rows = []
+    errors = [] # Connect this to logging after filling
 
-    # store data
+    for x in result: # Item Id, Members?, Trade limit, High Alch, Name
+        try:
+            rows.append((x["id"], x["members"], str(x["limit"]), x["highalch"], x["name"]))
+        except KeyError:
+            pass
+        try:
+            rows.append((x["id"], x["members"], "Unknown", x["highalch"], x["name"]))
+        except KeyError:
+            pass
+        try:
+            rows.append((x["id"], x["members"], str(x["limit"]), "None", x["name"]))
+        except KeyError:
+            pass
+        try:
+            rows.append((x["id"], x["members"], "Unknown", "None", x["name"]))
+        except KeyError:
+            error = (x["id"], x["name"])
+            errors.append(error)
 
-     # https://static.runelite.net/cache/item/icon/{item_id}.png er et nemt sted at snuppe ikoner fra 
-     # gem dem i seperat db table (lav ny metode til at tjekke efter nye entries og kald den)
+    cur = kwargs.pop("cursor")
+    cur.execute("TRUNCATE TABLE mapping;") # Can/should be refactored to check for new information instead of clearing
+
+    # Remove bad data from known ids
+    settings = {}
+    with open('settings.json') as json:
+        settings = json.load(json)
+
+    for row in range(rows, 0, -1): # Iterate backwards so deleting doesnt desync whole list
+        if rows[row][0] in settings["dirty_ids"]:
+            del rows[row]
+
+    arguments = ','.join(cur.mogrify("%s,%s,%s,%s,%s)", x).decode('utf-8') for x in rows)
+
+def get_item_thumbnails():
+    # https://static.runelite.net/cache/item/icon/{item_id}.png er et nemt sted at snuppe ikoner fra
+    # gem dem i seperat db table (lav ny metode til at tjekke efter nye entries og kald den)
+    pass
 
 @db_connection
 def store_5min(**kwargs):
@@ -63,10 +96,7 @@ def store_5min(**kwargs):
     timestamp = result["timestamp"]
     timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
     items = result["data"]
-    
+
     cur = kwargs.pop("cursor")
 
-
     # store data
-
-store_5min()
