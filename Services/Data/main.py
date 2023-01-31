@@ -53,22 +53,19 @@ def update_mapping(**kwargs):
 
     for x in result: # Item Id, Members?, Trade limit, High Alch, Name
         try:
-            limit = x["limit"]
+            limit = str(x["limit"])
         except:
-            limit = None
+            limit = "None"
         try:
-            highalch = x["highalch"]
+            highalch = str(x["highalch"])
         except:
-            highalch = None
+            highalch = "None"
 
         try:
             rows.append((x["id"], x["members"], limit, highalch, x["name"]))
         except KeyError:
             error = (x["id"], x["name"])
             errors.append(error)
-
-    cur = kwargs.pop("cursor")
-    cur.execute("TRUNCATE TABLE mapping;") # Can/should be refactored to check for new information instead of clearing
 
     # Remove bad data from known ids
     settings = {}
@@ -79,7 +76,10 @@ def update_mapping(**kwargs):
         if rows[row][0] in settings["dirty_ids"]:
             del rows[row]
 
-    arguments = ','.join(cur.mogrify("%s,%s,%s,%s,%s)", x).decode('utf-8') for x in rows)
+    cur = kwargs.pop("cursor")
+    cur.execute("TRUNCATE TABLE mapping;") # Can/should be refactored to check for new information instead of clearing
+    
+    values_string = ",".join(cur.mogrify("(%s, %s, %s, %s, %s)", x) for x in rows)
 
 def get_item_thumbnails():
     # https://static.runelite.net/cache/item/icon/{item_id}.png er et nemt sted at snuppe ikoner fra
