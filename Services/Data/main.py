@@ -53,19 +53,16 @@ def update_mapping(**kwargs):
 
     for x in result: # Item Id, Members?, Trade limit, High Alch, Name
         try:
-            rows.append((x["id"], x["members"], str(x["limit"]), x["highalch"], x["name"]))
-        except KeyError:
-            pass
+            limit = x["limit"]
+        except:
+            limit = None
         try:
-            rows.append((x["id"], x["members"], "Unknown", x["highalch"], x["name"]))
-        except KeyError:
-            pass
+            highalch = x["highalch"]
+        except:
+            highalch = None
+
         try:
-            rows.append((x["id"], x["members"], str(x["limit"]), "None", x["name"]))
-        except KeyError:
-            pass
-        try:
-            rows.append((x["id"], x["members"], "Unknown", "None", x["name"]))
+            rows.append((x["id"], x["members"], limit, highalch, x["name"]))
         except KeyError:
             error = (x["id"], x["name"])
             errors.append(error)
