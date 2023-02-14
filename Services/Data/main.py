@@ -3,6 +3,7 @@ import psycopg2 as pg
 from datetime import datetime
 import requests
 import json
+from os import path
 
 app = FastAPI()
 
@@ -48,7 +49,7 @@ def api_get(url):
 @db_connection
 def update_mapping(**kwargs):
     result = api_get("mapping")
-    rows = []
+    items = []
     errors = [] # Connect this to logging after filling
 
     for x in result: # Item Id, Members?, Trade limit, High Alch, Name
@@ -62,7 +63,7 @@ def update_mapping(**kwargs):
             highalch = "None"
 
         try:
-            rows.append((x["id"], x["members"], limit, highalch, x["name"]))
+            items.append((x["id"], x["members"], limit, highalch, x["name"]))
         except KeyError:
             error = (x["id"], x["name"])
             errors.append(error)
@@ -72,19 +73,29 @@ def update_mapping(**kwargs):
     with open('settings.json') as json:
         settings = json.load(json)
 
-    for row in range(rows, 0, -1): # Iterate backwards so deleting doesnt desync whole list
-        if rows[row][0] in settings["dirty_ids"]:
-            del rows[row]
+    for item in range(items, 0, -1): # Iterate backwards so deleting doesnt desync whole list
+        if items[item][0] in settings["dirty_ids"]:
+            del items[item]
 
     cur = kwargs.pop("cursor")
     cur.execute("TRUNCATE TABLE mapping;") # Can/should be refactored to check for new information instead of clearing
     
-    values_string = ",".join(cur.mogrify("(%s, %s, %s, %s, %s)", x) for x in rows)
+    values_string = ",".join(cur.mogrify("(%s, %s, %s, %s, %s)", x) for x in items)
 
-def get_item_thumbnails():
-    # https://static.runelite.net/cache/item/icon/{item_id}.png er et nemt sted at snuppe ikoner fra
-    # gem dem i seperat db table (lav ny metode til at tjekke efter nye entries og kald den)
-    pass
+def get_item_thumbnail(item_id): # Would recommend using a less janky storage method than a folder
+    thumbnail_path = f"./Thumbnails/{item_id}.png"
+
+    if not path.exists(thumbnail_path):
+        url = f"https://static.runelite.net/cache/item/icon/{item_id}.png"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            with open(f"thumbnails/{item_id}.png", "wb") as f:
+                f.write(response.content)
+
+        return thumbnail_path
+
+    return thumbnail_path
 
 @db_connection
 def store_5min(**kwargs):

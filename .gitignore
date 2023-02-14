@@ -130,3 +130,6 @@ dmypy.json
 
 # Connection string
 Services/Data/settings.json
+
+# Item thumbnail pictures
+Services/Data/Thumbnails/**
