@@ -41,16 +41,15 @@ def db_connection(func):
 
     return with_connection
 
-def api_get(url):
+def get_api_response(url):
     headers = {'User-Agent': 'data_analysis_project-Chaotic#1161',}
     response = requests.get(f"https://prices.runescape.wiki/api/v1/osrs/{url}", headers=headers)
     return json.loads(response.text)
 
-@db_connection
-def update_mapping(**kwargs):
-    result = api_get("mapping")
+def get_mapping():
+    result = get_api_response("mapping")
     items = []
-    errors = [] # Connect this to logging after filling
+    errors = []
 
     for item in result: # Item Id, Members?, Trade limit, High Alch, Name
         if not "limit" in item:
@@ -72,6 +71,14 @@ def update_mapping(**kwargs):
     for item in range(items, 0, -1): # Iterate backwards so deleting doesnt desync whole list
         if items[item][0] in settings["dirty_ids"]:
             del items[item]
+
+    # Add logging that dumps the errors list to aggregator
+
+    return items
+
+@db_connection
+def update_mapping(**kwargs):
+    items = get_mapping()
 
     cur = kwargs.pop("cursor")
     cur.execute("TRUNCATE TABLE mapping;") # Can/should be refactored to check for new information instead of clearing
@@ -96,10 +103,12 @@ def get_item_thumbnail(item_id): # Consider switching to just referencing the ru
 
 @db_connection
 def store_5min(**kwargs):
-    result = api_get("5m")
+    result = get_api_response("5m")
 
+    # Convert timestamp to usable format
     timestamp = result["timestamp"]
     timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    
     items = result["data"]
 
     cur = kwargs.pop("cursor")
