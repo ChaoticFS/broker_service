@@ -65,11 +65,11 @@ def get_mapping():
 
     # Remove bad data from known ids
     settings = {}
-    with open('settings.json') as json:
-        settings = json.load(json)
+    with open("Services\Data\settings.json") as f:
+        settings = json.load(f)
 
-    for item in range(items, 0, -1): # Iterate backwards so deleting doesnt desync whole list
-        if items[item][0] in settings["dirty_ids"]:
+    for item in range(len(items), 0, -1): # Iterate backwards so deleting doesnt desync whole list
+        if items[item-1][0] in settings["dirty_ids"]:
             del items[item]
 
     # Add logging that dumps the errors list to aggregator
@@ -79,11 +79,12 @@ def get_mapping():
 @db_connection
 def update_mapping(**kwargs):
     items = get_mapping()
-
     cur = kwargs.pop("cursor")
-    cur.execute("TRUNCATE TABLE mapping;") # Can/should be refactored to check for new information instead of clearing
-    
-    values_string = ",".join(cur.mogrify("(%s, %s, %s, %s, %s)", x) for x in items)
+
+    # Creates string of all values to be inserted from list of tuples,
+    values_string = ",".join(cur.mogrify("(%s, %s, %s, %s, %s)", x).decode("utf-8") for x in items)
+
+    cur.execute("INSERT INTO mapping (ItemId, Members, Limit, HighAlch, Name) VALUES " + values_string)
 
 def get_item_thumbnail(item_id): # Consider switching to just referencing the runelite host instead of selfhosting it, mostly did it for stability
     dir_path = Path(__file__).parents[0]
